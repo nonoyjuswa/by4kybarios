@@ -159,8 +159,10 @@ public class MainFrame extends javax.swing.JFrame {
         btnstockin.addActionListener(this::btnstockinActionPerformed);
 
         btnstockout.setText("STOCK OUT ");
+        btnstockout.addActionListener(this::btnstockoutActionPerformed);
 
         btnledger.setText("LEDGER");
+        btnledger.addActionListener(this::btnledgerActionPerformed);
 
         btnusers.setText("USERS");
         btnusers.addActionListener(this::btnusersActionPerformed);
@@ -193,7 +195,7 @@ public class MainFrame extends javax.swing.JFrame {
                         .addComponent(lblDateTimeTitle, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE)
                         .addComponent(lbldate, javax.swing.GroupLayout.PREFERRED_SIZE, 234, javax.swing.GroupLayout.PREFERRED_SIZE))
                     .addComponent(clock, javax.swing.GroupLayout.PREFERRED_SIZE, 234, javax.swing.GroupLayout.PREFERRED_SIZE))
-                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                .addContainerGap(28, Short.MAX_VALUE))
         );
         datetimePanelLayout.setVerticalGroup(
             datetimePanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -557,6 +559,14 @@ public class MainFrame extends javax.swing.JFrame {
     private void btnstockinActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnstockinActionPerformed
         // TODO add your handling code here:
     }//GEN-LAST:event_btnstockinActionPerformed
+
+    private void btnledgerActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnledgerActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btnledgerActionPerformed
+
+    private void btnstockoutActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnstockoutActionPerformed
+        // TODO add your handling code here:
+    }//GEN-LAST:event_btnstockoutActionPerformed
 
     public static void main(String args[]) {
         java.awt.EventQueue.invokeLater(() -> { new LoginFrame().setVisible(true); });
