@@ -33,6 +33,7 @@ com\mycompany\myostockmanagement\ui\StockAdjustment$2.class
 com\mycompany\myostockmanagement\MainFrame$1.class
 com\mycompany\myostockmanagement\MyoStockManagement.class
 com\mycompany\myostockmanagement\service\StockAdjustmentService.class
+com\mycompany\myostockmanagement\ui\NewAdjustment.class
 com\mycompany\myostockmanagement\MainFrame.class
 com\mycompany\myostockmanagement\model\Adjustment.class
 com\mycompany\myostockmanagement\dao\RackDAO.class
