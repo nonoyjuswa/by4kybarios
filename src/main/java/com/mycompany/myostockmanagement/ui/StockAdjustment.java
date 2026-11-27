@@ -4,6 +4,17 @@
  */
 package com.mycompany.myostockmanagement.ui;
 
+import com.mycompany.myostockmanagement.service.StockAdjustmentService;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.sql.SQLException;
+import java.util.List;
+import javax.swing.JOptionPane;
+import javax.swing.JTable;
+import javax.swing.table.DefaultTableModel;
+
 /**
  *
  * @author Juswa
@@ -11,12 +22,55 @@ package com.mycompany.myostockmanagement.ui;
 public class StockAdjustment extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(StockAdjustment.class.getName());
+    private final StockAdjustmentService service = new StockAdjustmentService();
+    private final String fullName;
+    private final String role;
+    private final String employeeId;
 
     /**
      * Creates new form StockAdjustment
      */
     public StockAdjustment() {
+        this("Test User", "Admin", "ADM-001");
+    }
+
+    public StockAdjustment(String fullName, String role, String employeeId) {
+        this.fullName = fullName == null ? "User" : fullName;
+        this.role = role == null ? "User" : role;
+        this.employeeId = employeeId == null ? "" : employeeId;
         initComponents();
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        jLabel3.setText(this.fullName);
+        jLabel4.setText(this.role);
+
+        JTable[] tables = {jTable1, jTable2, jTable3, jTable4, jTable5, jTable6};
+        for (JTable table : tables) {
+            table.setModel(new DefaultTableModel(
+                new Object[]{"REFERENCE", "DATE", "LOCATION", "COUNTED BY", "LINES",
+                             "NET VARIANCE", "MAIN REASON", "STATUS", "APPROVED BY"}, 0) {
+                @Override public boolean isCellEditable(int row, int column) { return false; }
+            });
+            table.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        }
+
+        for (JTable table : tables) {
+            table.addMouseListener(new MouseAdapter() {
+                @Override public void mouseClicked(MouseEvent e) {
+                    if (e.getClickCount() == 2) {
+                        int row = table.getSelectedRow();
+                        if (row >= 0) {
+                            row = table.convertRowIndexToModel(row);
+                            Object reference = table.getModel().getValueAt(row, 0);
+                            if (reference != null) openForm(reference.toString());
+                        }
+                    }
+                }
+            });
+        }
+        jButton8.addActionListener(e -> openForm(null));
+        jButton1.addActionListener(e -> dispose());
+        loadAdjustments();
+        setLocationRelativeTo(null);
     }
 
     /**
@@ -478,6 +532,49 @@ public class StockAdjustment extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void openForm(String reference) {
+        NewAdjustment form = new NewAdjustment(employeeId, reference);
+        setEnabled(false);
+        form.addWindowListener(new WindowAdapter() {
+            @Override public void windowClosed(WindowEvent e) {
+                setEnabled(true);
+                loadAdjustments();
+                toFront();
+            }
+        });
+        form.setVisible(true);
+    }
+
+    private void loadAdjustments() {
+        JTable[] tables = {jTable1, jTable2, jTable3, jTable4, jTable5, jTable6};
+        String[] names = {"All", "Draft", "Pending Approval", "Approved", "Posted", "Rejected"};
+        try {
+            List<Object[]> rows = service.findListRows();
+            for (JTable table : tables) {
+                ((DefaultTableModel) table.getModel()).setRowCount(0);
+            }
+            int[] counts = new int[6];
+            counts[0] = rows.size();
+            for (Object[] row : rows) {
+                ((DefaultTableModel) jTable1.getModel()).addRow(row);
+                String status = row[7] == null ? "" : row[7].toString();
+                for (int i = 1; i < names.length; i++) {
+                    if (names[i].equalsIgnoreCase(status)) {
+                        ((DefaultTableModel) tables[i].getModel()).addRow(row);
+                        counts[i]++;
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < names.length; i++) {
+                jTabbedPane1.setTitleAt(i, names[i] + " (" + counts[i] + ")");
+            }
+        } catch (SQLException ex) {
+            JOptionPane.showMessageDialog(this, ex.getMessage(), "Stock Adjustment",
+                JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
     /**
      * @param args the command line arguments

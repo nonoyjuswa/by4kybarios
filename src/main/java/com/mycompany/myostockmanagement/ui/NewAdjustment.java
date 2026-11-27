@@ -4,6 +4,19 @@
  */
 package com.mycompany.myostockmanagement.ui;
 
+import com.mycompany.myostockmanagement.dao.ProductDAO;
+import com.mycompany.myostockmanagement.model.Adjustment;
+import com.mycompany.myostockmanagement.model.AdjustmentLine;
+import com.mycompany.myostockmanagement.service.StockAdjustmentService;
+import java.awt.event.FocusAdapter;
+import java.awt.event.FocusEvent;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import javax.swing.DefaultComboBoxModel;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+
 /**
  *
  * @author Juswa
@@ -11,12 +24,52 @@ package com.mycompany.myostockmanagement.ui;
 public class NewAdjustment extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(NewAdjustment.class.getName());
+    private final StockAdjustmentService service = new StockAdjustmentService();
+    private final String employeeId;
+    private final List<ProductDAO.Product> products = new ArrayList<>();
+    private final List<AdjustmentLine> adjustmentLines = new ArrayList<>();
+    private int adjustmentId;
+    private String mode = "new";
 
-    /**
-     * Creates new form NewJFrame
-     */
+    private javax.swing.JTextField txtReference;
+    private javax.swing.JTextField txtLocation;
+    private javax.swing.JTextField txtReason;
+    private javax.swing.JTextArea txtExplanation;
+    private javax.swing.JComboBox<String> cmbProduct;
+    private javax.swing.JTextField txtSystemQty;
+    private javax.swing.JTextField txtCountedQty;
+    private javax.swing.JTextField txtVariance;
+    private javax.swing.JButton btnAddLine;
+    private javax.swing.JTable tblLines;
+    private javax.swing.JButton btnRemoveLine;
+    private javax.swing.JLabel lblNetVariance;
+    private javax.swing.JButton btnCancel;
+    private javax.swing.JButton btnLeft;
+    private javax.swing.JButton btnRight;
+    private javax.swing.JLabel lblTitle;
+    private javax.swing.JLabel lblSubtitle;
+
     public NewAdjustment() {
+        this("EMP-001", null);
+    }
+
+    public NewAdjustment(String employeeId, String reference) {
+        this.employeeId = employeeId == null ? "" : employeeId;
+        adjustmentId = 0;
         initComponents();
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        bindAliases();
+        setup();
+        wireEvents();
+        if (reference == null) {
+            mode = "new";
+            txtReference.setText("Generated on save");
+            configureButtons();
+        } else {
+            mode = "loading";
+            loadExisting(reference);
+        }
+        setLocationRelativeTo(null);
     }
 
     /**
@@ -278,6 +331,298 @@ public class NewAdjustment extends javax.swing.JFrame {
 
         pack();
     }// </editor-fold>//GEN-END:initComponents
+
+    private void bindAliases() {
+        txtReference = jTextField1;
+        txtLocation = jTextField2;
+        txtReason = jTextField3;
+        txtExplanation = jTextArea1;
+        cmbProduct = jComboBox1;
+        txtSystemQty = jTextField4;
+        txtCountedQty = jTextField5;
+        txtVariance = jTextField6;
+        btnAddLine = jButton1;
+        tblLines = jTable1;
+        btnRemoveLine = jButton2;
+        lblNetVariance = jLabel12;
+        btnCancel = jButton3;
+        btnLeft = jButton4;
+        btnRight = jButton5;
+        lblTitle = jLabel1;
+        lblSubtitle = jLabel2;
+    }
+
+    private void setup() {
+        txtReference.setEditable(false);
+        txtSystemQty.setEditable(false);
+        txtVariance.setEditable(false);
+        txtLocation.setToolTipText("Rack code, e.g. A-01-2");
+        txtReason.setToolTipText("Count discrepancy, Damaged goods, Loss or Found stock");
+
+        tblLines.setModel(new DefaultTableModel(
+            new Object[]{"PRODUCT", "SYSTEM QTY", "COUNTED QTY", "VARIANCE"}, 0) {
+            @Override public boolean isCellEditable(int row, int column) { return false; }
+        });
+        tblLines.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+        cmbProduct.setModel(new DefaultComboBoxModel<>());
+        try {
+            for (ProductDAO.Product product : new ProductDAO().findAll()) {
+                products.add(product);
+                cmbProduct.addItem(product.name());
+            }
+        } catch (SQLException ex) {
+            error(ex);
+        }
+        refreshNetVariance();
+    }
+
+    private void wireEvents() {
+        cmbProduct.addActionListener(e -> refreshSystemQty());
+        txtLocation.addActionListener(e -> refreshSystemQty());
+        txtLocation.addFocusListener(new FocusAdapter() {
+            @Override public void focusLost(FocusEvent e) { refreshSystemQty(); }
+        });
+        txtCountedQty.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            @Override public void insertUpdate(javax.swing.event.DocumentEvent e) { refreshVariance(); }
+            @Override public void removeUpdate(javax.swing.event.DocumentEvent e) { refreshVariance(); }
+            @Override public void changedUpdate(javax.swing.event.DocumentEvent e) { refreshVariance(); }
+        });
+        btnAddLine.addActionListener(e -> run(this::addLine));
+        btnRemoveLine.addActionListener(e -> removeLine());
+        btnCancel.addActionListener(e -> dispose());
+        btnLeft.addActionListener(e -> dispatchLeft());
+        btnRight.addActionListener(e -> dispatchRight());
+    }
+
+    private void refreshSystemQty() {
+        if (cmbProduct.getSelectedIndex() < 0 || txtLocation == null) {
+            txtSystemQty.setText("");
+            txtVariance.setText("");
+            return;
+        }
+        String rack = txtLocation.getText().trim();
+        if (rack.isEmpty()) {
+            txtSystemQty.setText("");
+            txtVariance.setText("");
+            return;
+        }
+        int index = cmbProduct.getSelectedIndex();
+        if (index >= 0 && index < products.size()) {
+            try {
+                int qty = service.systemQty(products.get(index).id(), rack);
+                txtSystemQty.setText(String.valueOf(qty));
+                refreshVariance();
+            } catch (Exception ex) {
+                txtSystemQty.setText("");
+                txtVariance.setText("");
+            }
+        }
+    }
+
+    private void refreshVariance() {
+        txtVariance.setText("");
+        if (txtSystemQty.getText().trim().isEmpty()) return;
+        try {
+            int system = Integer.parseInt(txtSystemQty.getText().trim());
+            int counted = Integer.parseInt(txtCountedQty.getText().trim());
+            int variance = counted - system;
+            txtVariance.setText(variance > 0 ? "+" + variance : String.valueOf(variance));
+        } catch (NumberFormatException ignored) {
+        }
+    }
+
+    private void addLine() throws Exception {
+        if (cmbProduct.getSelectedIndex() < 0) throw new IllegalArgumentException("Select a product.");
+        if (txtLocation.getText().trim().isEmpty()) throw new IllegalArgumentException("Rack location is required.");
+        int index = cmbProduct.getSelectedIndex();
+        if (index < 0 || index >= products.size()) throw new IllegalArgumentException("Select a product.");
+        ProductDAO.Product product = products.get(index);
+        for (AdjustmentLine line : adjustmentLines) {
+            if (line.productId() == product.id()) throw new IllegalArgumentException("This product is already in the count.");
+        }
+        int system;
+        try {
+            system = service.systemQty(product.id(), txtLocation.getText());
+        } catch (SQLException ex) {
+            throw ex;
+        }
+        int counted;
+        try {
+            counted = Integer.parseInt(txtCountedQty.getText().trim());
+            if (counted < 0) throw new NumberFormatException();
+        } catch (NumberFormatException ex) {
+            throw new IllegalArgumentException("Counted quantity must be a whole number 0 or greater.");
+        }
+        if (counted == system) throw new IllegalArgumentException("Counted quantity must differ from system quantity.");
+        AdjustmentLine line = new AdjustmentLine(product.id(), product.name(), system, counted);
+        adjustmentLines.add(line);
+        ((DefaultTableModel) tblLines.getModel()).addRow(new Object[]{
+            line.productName(), line.systemQty(), line.countedQty(),
+            line.variance() > 0 ? "+" + line.variance() : String.valueOf(line.variance())
+        });
+        txtCountedQty.setText("");
+        txtLocation.setEditable(false);
+        refreshNetVariance();
+    }
+
+    private void removeLine() {
+        int row = tblLines.getSelectedRow();
+        if (row < 0) {
+            JOptionPane.showMessageDialog(this, "Select a line to remove.", "Adjustment", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+        row = tblLines.convertRowIndexToModel(row);
+        adjustmentLines.remove(row);
+        ((DefaultTableModel) tblLines.getModel()).removeRow(row);
+        if (adjustmentLines.isEmpty()) txtLocation.setEditable(true);
+        refreshNetVariance();
+    }
+
+    private void refreshNetVariance() {
+        int net = 0;
+        for (AdjustmentLine line : adjustmentLines) net += line.variance();
+        lblNetVariance.setText("Net Variance: " + (net > 0 ? "+" + net : String.valueOf(net)));
+    }
+
+    private void loadExisting(String reference) {
+        run(() -> {
+            Adjustment adjustment = service.find(reference);
+            adjustmentId = adjustment.id();
+            txtReference.setText(adjustment.referenceNo());
+            txtLocation.setText(adjustment.rackCode());
+            txtReason.setText(adjustment.reason());
+            txtExplanation.setText(adjustment.explanation());
+            lblTitle.setText("Adjustment " + adjustment.referenceNo());
+            lblSubtitle.setText("Status: " + adjustment.status()
+                + (adjustment.reviewNote() == null || adjustment.reviewNote().isBlank()
+                    ? "" : " - " + adjustment.reviewNote()));
+            adjustmentLines.clear();
+            ((DefaultTableModel) tblLines.getModel()).setRowCount(0);
+            for (AdjustmentLine line : adjustment.lines()) {
+                adjustmentLines.add(line);
+                ((DefaultTableModel) tblLines.getModel()).addRow(new Object[]{
+                    line.productName(), line.systemQty(), line.countedQty(),
+                    line.variance() > 0 ? "+" + line.variance() : String.valueOf(line.variance())
+                });
+            }
+            mode = adjustment.status();
+            txtLocation.setEditable(false);
+            configureButtons();
+            refreshNetVariance();
+        });
+    }
+
+    private void configureButtons() {
+        boolean editable = "new".equals(mode) || "Draft".equals(mode);
+        txtLocation.setEditable(editable);
+        txtReason.setEditable(editable);
+        txtExplanation.setEditable(editable);
+        cmbProduct.setEnabled(editable);
+        btnAddLine.setEnabled(editable);
+        btnRemoveLine.setEnabled(editable);
+        txtCountedQty.setEditable(editable);
+        txtLocation.setEditable(editable && adjustmentLines.isEmpty());
+        btnCancel.setText("new".equals(mode) || "Draft".equals(mode) ? "Cancel" : "Close");
+
+        if ("new".equals(mode) || "Draft".equals(mode)) {
+            btnLeft.setVisible(true);
+            btnRight.setVisible(true);
+            btnLeft.setText("Save Draft");
+            btnRight.setText("Submit for Approval");
+            if ("Draft".equals(mode) && adjustmentLines.isEmpty()) txtLocation.setEditable(true);
+        } else if ("Pending Approval".equals(mode)) {
+            btnLeft.setText("Reject");
+            btnRight.setText("Approve");
+            configureSupervisorButtons();
+        } else if ("Approved".equals(mode)) {
+            btnLeft.setVisible(false);
+            btnRight.setText("Post to Stock");
+            configureSupervisorButtons();
+            btnRight.setVisible(supervisor);
+        } else {
+            btnLeft.setVisible(false);
+            btnRight.setVisible(false);
+        }
+    }
+
+    private boolean supervisor;
+
+    private void configureSupervisorButtons() {
+        try {
+            supervisor = service.isSupervisor(employeeId);
+        } catch (SQLException ex) {
+            supervisor = false;
+            error(ex);
+        }
+        btnLeft.setVisible(supervisor);
+        btnRight.setVisible(supervisor);
+    }
+
+    private void dispatchLeft() {
+        if ("new".equals(mode) || "Draft".equals(mode)) saveDraft(false);
+        else if ("Pending Approval".equals(mode)) run(() -> {
+            String note = JOptionPane.showInputDialog(this, "Rejection note:", "Reject Adjustment",
+                JOptionPane.QUESTION_MESSAGE);
+            if (note == null) return;
+            service.reject(adjustmentId, employeeId, note);
+            dispose();
+        });
+    }
+
+    private void dispatchRight() {
+        if ("new".equals(mode) || "Draft".equals(mode)) {
+            saveDraft(true);
+        } else if ("Pending Approval".equals(mode)) {
+            run(() -> {
+                int choice = JOptionPane.showConfirmDialog(this, "Approve this adjustment?",
+                    "Approve", JOptionPane.YES_NO_OPTION);
+                if (choice == JOptionPane.YES_OPTION) {
+                    service.approve(adjustmentId, employeeId);
+                    dispose();
+                }
+            });
+        } else if ("Approved".equals(mode)) {
+            run(() -> {
+                int choice = JOptionPane.showConfirmDialog(this, "Post this adjustment to stock?",
+                    "Post to Stock", JOptionPane.YES_NO_OPTION);
+                if (choice == JOptionPane.YES_OPTION) {
+                    service.post(adjustmentId, employeeId);
+                    dispose();
+                }
+            });
+        }
+    }
+
+    private void saveDraft(boolean submit) {
+        run(() -> {
+            adjustmentId = service.saveDraft(adjustmentId, txtLocation.getText(),
+                txtReason.getText(), txtExplanation.getText(), employeeId, adjustmentLines);
+            if (submit) {
+                service.submit(adjustmentId);
+                JOptionPane.showMessageDialog(this, "Submitted for approval.", "Adjustment",
+                    JOptionPane.INFORMATION_MESSAGE);
+            } else {
+                JOptionPane.showMessageDialog(this, "Draft saved.", "Adjustment",
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+            dispose();
+        });
+    }
+
+    private void run(SqlAction action) {
+        try {
+            action.run();
+        } catch (Exception ex) {
+            error(ex);
+        }
+    }
+
+    private void error(Exception ex) {
+        JOptionPane.showMessageDialog(this, ex.getMessage(), "Adjustment", JOptionPane.ERROR_MESSAGE);
+    }
+
+    @FunctionalInterface
+    private interface SqlAction { void run() throws Exception; }
 
     private void jTextField3ActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_jTextField3ActionPerformed
         // TODO add your handling code here:

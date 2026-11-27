@@ -34,10 +34,10 @@
     <DimensionLayout dim="1">
       <Group type="103" groupAlignment="0" attributes="0">
           <Group type="102" attributes="0">
-              <Component id="sidebarPanel" pref="549" max="32767" attributes="0"/>
+              <Component id="sidebarPanel" pref="618" max="32767" attributes="0"/>
               <EmptySpace max="-2" attributes="0"/>
           </Group>
-          <Component id="contentPanel" alignment="0" pref="555" max="32767" attributes="0"/>
+          <Component id="contentPanel" alignment="0" pref="624" max="32767" attributes="0"/>
       </Group>
     </DimensionLayout>
   </Layout>
@@ -64,19 +64,6 @@
               </Group>
               <Group type="102" attributes="0">
                   <Group type="103" groupAlignment="0" attributes="0">
-                      <Group type="102" alignment="0" attributes="0">
-                          <EmptySpace max="-2" attributes="0"/>
-                          <Group type="103" groupAlignment="0" attributes="0">
-                              <Component id="btndashboard" max="32767" attributes="0"/>
-                              <Component id="btninventory" alignment="1" max="32767" attributes="0"/>
-                              <Component id="btnrackmap" alignment="1" max="32767" attributes="0"/>
-                              <Component id="btnstockin" alignment="1" max="32767" attributes="0"/>
-                              <Component id="btnstockout" alignment="1" max="32767" attributes="0"/>
-                              <Component id="btnledger" alignment="1" max="32767" attributes="0"/>
-                              <Component id="btnusers" alignment="1" max="32767" attributes="0"/>
-                              <Component id="datetimePanel" alignment="1" pref="271" max="32767" attributes="0"/>
-                          </Group>
-                      </Group>
                       <Group type="102" attributes="0">
                           <Group type="103" groupAlignment="0" attributes="0">
                               <Group type="102" alignment="0" attributes="0">
@@ -92,6 +79,20 @@
                               </Group>
                           </Group>
                           <EmptySpace min="0" pref="0" max="32767" attributes="0"/>
+                      </Group>
+                      <Group type="102" attributes="0">
+                          <EmptySpace max="-2" attributes="0"/>
+                          <Group type="103" groupAlignment="0" attributes="0">
+                              <Component id="btndashboard" max="32767" attributes="0"/>
+                              <Component id="btninventory" alignment="1" max="32767" attributes="0"/>
+                              <Component id="btnrackmap" alignment="1" max="32767" attributes="0"/>
+                              <Component id="btnstockin" alignment="1" max="32767" attributes="0"/>
+                              <Component id="btnstockout" alignment="1" max="32767" attributes="0"/>
+                              <Component id="btnledger" alignment="1" max="32767" attributes="0"/>
+                              <Component id="btnusers" alignment="1" max="32767" attributes="0"/>
+                              <Component id="datetimePanel" alignment="1" pref="271" max="32767" attributes="0"/>
+                              <Component id="btnadjustment" alignment="0" max="32767" attributes="0"/>
+                          </Group>
                       </Group>
                   </Group>
                   <EmptySpace max="-2" attributes="0"/>
@@ -115,9 +116,11 @@
                   <Component id="btnstockout" min="-2" pref="35" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="btnledger" min="-2" pref="35" max="-2" attributes="0"/>
+                  <EmptySpace max="32767" attributes="0"/>
+                  <Component id="btnadjustment" min="-2" pref="37" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="btnusers" min="-2" pref="35" max="-2" attributes="0"/>
-                  <EmptySpace max="32767" attributes="0"/>
+                  <EmptySpace min="-2" pref="24" max="-2" attributes="0"/>
                   <Component id="datetimePanel" min="-2" pref="105" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="lblSignedinas" min="-2" max="-2" attributes="0"/>
@@ -276,6 +279,14 @@
           <Properties>
             <Property name="text" type="java.lang.String" value="name"/>
           </Properties>
+        </Component>
+        <Component class="javax.swing.JButton" name="btnadjustment">
+          <Properties>
+            <Property name="text" type="java.lang.String" value="STOCK ADJUSTMENT"/>
+          </Properties>
+          <Events>
+            <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnadjustmentActionPerformed"/>
+          </Events>
         </Component>
       </SubComponents>
     </Container>
@@ -437,7 +448,7 @@
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
                       <Group type="103" groupAlignment="0" attributes="0">
-                          <Component id="jScrollPane1" pref="0" max="32767" attributes="0"/>
+                          <Component id="jScrollPane1" max="32767" attributes="0"/>
                           <Component id="needsrestockingpanel" max="32767" attributes="0"/>
                       </Group>
                       <EmptySpace max="-2" attributes="0"/>
